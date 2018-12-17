@@ -2,6 +2,7 @@
 require 'bundler/setup'
 require 'rubygems'
 require 'parallel'
+require 'date'
 
 ARGV.each do |arg|
   unless arg =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/
@@ -11,7 +12,7 @@ ARGV.each do |arg|
 end
 
 first = ARGV.shift || '192.168.0.1'
-last  = ARGV.shift || first.gsub(/\d+$/, '254')
+last = ARGV.shift || first.gsub(/\d+$/, '254')
 puts "check #{first} ~ #{last}"
 
 addrs = []
@@ -21,20 +22,21 @@ first.scan(/\d+$/)[0].to_i.upto(254) do |i|
   break if addr == last
 end
 
-results = Parallel.map(addrs, :in_threads => 128){|addr|
+results = Parallel.map(addrs, :in_threads => 128) {|addr|
   `ping -c 1 #{addr}`
   `arp -n #{addr}`.strip
-}.select{|i|
+}.select {|i|
   i =~ /[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}/
-}.map{|i|
+}.map {|i|
   {
-    :mac => i.scan(/[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}/)[0],
-    :ip => i.scan(/\d+\.\d+\.\d+.\d+/)[0]
+    date: DateTime.now.to_s,
+    mac: i.scan(/[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}:[a-z\d]{1,2}/)[0],
+    ip: i.scan(/\d+\.\d+\.\d+.\d+/)[0]
   }
 }
 
-puts "-"*2
+puts "-" * 2
 results.each do |res|
-  puts "#{res[:ip]}\t#{res[:mac]}"
+  puts "#{res[:date]}\t#{res[:ip]}\t#{res[:mac]}"
 end
 
